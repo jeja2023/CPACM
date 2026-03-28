@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  cpa-codex:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cpa-codex-manager
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      # 在这里配置宿主机 IP 用于访问代理或其它内部服务
+      - WEBUI_HOST=0.0.0.0
+      - WEBUI_PORT=9090
+      # 也可以通过此环境变量覆盖设置项中的数据库连接 (可选)
+      # - APP_DATABASE_URL=sqlite:///data/database.db
+    restart: always
