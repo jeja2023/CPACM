@@ -26,7 +26,7 @@ class RequestConfig:
     timeout: int = 30
     max_retries: int = 3
     retry_delay: float = 1.0
-    impersonate: str = "chrome"
+    impersonate: str = "chrome110"  # 推荐使用 chrome110 绕过 Cloudflare 质询
     verify_ssl: bool = True
     follow_redirects: bool = True
 
@@ -253,10 +253,8 @@ class OpenAIHTTPClient(HTTPClient):
             self.config.timeout = 30
             self.config.max_retries = 3
 
-        # 默认请求头
+        # 默认请求头 (移除硬编码 User-Agent，由 curl_cffi 自动根据指纹生成)
         self.default_headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                         "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json",
             "Accept-Language": "en-US,en;q=0.9",
             "Accept-Encoding": "gzip, deflate, br",
