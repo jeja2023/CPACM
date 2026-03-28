@@ -48,7 +48,7 @@ SETTING_DEFINITIONS: Dict[str, SettingDefinition] = {
     ),
     "app_version": SettingDefinition(
         db_key="app.version",
-        default_value="2.0.0",
+        default_value="2.0.1",
         category=SettingCategory.GENERAL,
         description="应用版本"
     ),

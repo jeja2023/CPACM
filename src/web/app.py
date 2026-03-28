@@ -193,7 +193,7 @@ def create_app() -> FastAPI:
         task_manager.set_loop(loop)
 
         logger.info("=" * 50)
-        logger.info(f"Codex 自动化注册 + CPA 账号管理系统 v1.0.0 启动中")
+        logger.info(f"Codex 自动化注册 + CPA 账号管理系统 v2.0.1 启动中")
         logger.info(f"调试模式: {settings.debug}")
         logger.info(f"数据库连接成功: {settings.database_url}")
         logger.info("=" * 50)
