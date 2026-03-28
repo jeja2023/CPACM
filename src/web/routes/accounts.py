@@ -345,108 +345,114 @@ class BatchExportRequest(BaseModel):
 
 @router.post("/export/json")
 async def export_accounts_json(request: BatchExportRequest):
-    """导出账号为 JSON 格式"""
-    with get_db() as db:
-        ids = resolve_account_ids(
-            db, request.ids, request.select_all,
-            request.status_filter, request.email_service_filter, request.search_filter,
-            request.cpa_uploaded_filter
-        )
-        accounts = db.query(Account).filter(Account.id.in_(ids)).all()
+    """导出账号为 JSON 格式（流式）"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"accounts_{timestamp}.json"
 
-        export_data = []
-        for acc in accounts:
-            export_data.append({
-                "email": acc.email,
-                "password": acc.password,
-                "client_id": acc.client_id,
-                "account_id": acc.account_id,
-                "workspace_id": acc.workspace_id,
-                "access_token": acc.access_token,
-                "refresh_token": acc.refresh_token,
-                "id_token": acc.id_token,
-                "session_token": acc.session_token,
-                "email_service": acc.email_service,
-                "registered_at": acc.registered_at.isoformat() if acc.registered_at else None,
-                "last_refresh": acc.last_refresh.isoformat() if acc.last_refresh else None,
-                "expires_at": acc.expires_at.isoformat() if acc.expires_at else None,
-                "status": acc.status,
-            })
+    def generate_json_stream():
+        with get_db() as db:
+            ids = resolve_account_ids(
+                db, request.ids, request.select_all,
+                request.status_filter, request.email_service_filter, request.search_filter,
+                request.cpa_uploaded_filter
+            )
+            yield "[\n"
+            first = True
+            
+            # 使用 yield_per 避免将所有数据载入内存
+            for acc in db.query(Account).filter(Account.id.in_(ids)).yield_per(1000):
+                data = {
+                    "email": acc.email,
+                    "password": acc.password,
+                    "client_id": acc.client_id,
+                    "account_id": acc.account_id,
+                    "workspace_id": acc.workspace_id,
+                    "access_token": acc.access_token,
+                    "refresh_token": acc.refresh_token,
+                    "id_token": acc.id_token,
+                    "session_token": acc.session_token,
+                    "email_service": acc.email_service,
+                    "registered_at": acc.registered_at.isoformat() if acc.registered_at else None,
+                    "last_refresh": acc.last_refresh.isoformat() if acc.last_refresh else None,
+                    "expires_at": acc.expires_at.isoformat() if acc.expires_at else None,
+                    "status": acc.status,
+                }
+                if not first:
+                    yield ",\n"
+                else:
+                    first = False
+                yield json.dumps(data, ensure_ascii=False, indent=2)
+            yield "\n]"
 
-        # 生成文件名
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"accounts_{timestamp}.json"
-
-        # 返回 JSON 响应
-        content = json.dumps(export_data, ensure_ascii=False, indent=2)
-
-        return StreamingResponse(
-            iter([content]),
-            media_type="application/json",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
+    return StreamingResponse(
+        generate_json_stream(),
+        media_type="application/json",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @router.post("/export/csv")
 async def export_accounts_csv(request: BatchExportRequest):
-    """导出账号为 CSV 格式"""
+    """导出账号为 CSV 格式（流式）"""
     import csv
     import io
 
-    with get_db() as db:
-        ids = resolve_account_ids(
-            db, request.ids, request.select_all,
-            request.status_filter, request.email_service_filter, request.search_filter,
-            request.cpa_uploaded_filter
-        )
-        accounts = db.query(Account).filter(Account.id.in_(ids)).all()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"accounts_{timestamp}.csv"
 
-        # 创建 CSV 内容
-        output = io.StringIO()
-        writer = csv.writer(output)
+    def generate_csv_stream():
+        with get_db() as db:
+            ids = resolve_account_ids(
+                db, request.ids, request.select_all,
+                request.status_filter, request.email_service_filter, request.search_filter,
+                request.cpa_uploaded_filter
+            )
 
-        # 写入表头
-        writer.writerow([
-            "ID", "Email", "Password", "Client ID",
-            "Account ID", "Workspace ID",
-            "Access Token", "Refresh Token", "ID Token", "Session Token",
-            "Email Service", "Status", "Registered At", "Last Refresh", "Expires At"
-        ])
+            output = io.StringIO()
+            writer = csv.writer(output)
 
-        # 写入数据
-        for acc in accounts:
+            # 写入表头
             writer.writerow([
-                acc.id,
-                acc.email,
-                acc.password or "",
-                acc.client_id or "",
-                acc.account_id or "",
-                acc.workspace_id or "",
-                acc.access_token or "",
-                acc.refresh_token or "",
-                acc.id_token or "",
-                acc.session_token or "",
-                acc.email_service,
-                acc.status,
-                acc.registered_at.isoformat() if acc.registered_at else "",
-                acc.last_refresh.isoformat() if acc.last_refresh else "",
-                acc.expires_at.isoformat() if acc.expires_at else ""
+                "ID", "Email", "Password", "Client ID",
+                "Account ID", "Workspace ID",
+                "Access Token", "Refresh Token", "ID Token", "Session Token",
+                "Email Service", "Status", "Registered At", "Last Refresh", "Expires At"
             ])
+            yield output.getvalue()
 
-        # 生成文件名
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"accounts_{timestamp}.csv"
+            # 流式获取写入数据
+            for acc in db.query(Account).filter(Account.id.in_(ids)).yield_per(1000):
+                output.truncate(0)
+                output.seek(0)
+                writer.writerow([
+                    acc.id,
+                    acc.email,
+                    acc.password or "",
+                    acc.client_id or "",
+                    acc.account_id or "",
+                    acc.workspace_id or "",
+                    acc.access_token or "",
+                    acc.refresh_token or "",
+                    acc.id_token or "",
+                    acc.session_token or "",
+                    acc.email_service,
+                    acc.status,
+                    acc.registered_at.isoformat() if acc.registered_at else "",
+                    acc.last_refresh.isoformat() if acc.last_refresh else "",
+                    acc.expires_at.isoformat() if acc.expires_at else ""
+                ])
+                yield output.getvalue()
 
-        return StreamingResponse(
-            iter([output.getvalue()]),
-            media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
+    return StreamingResponse(
+        generate_csv_stream(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @router.post("/export/sub2api")
 async def export_accounts_sub2api(request: BatchExportRequest):
-    """导出账号为 Sub2Api 格式（所有选中账号合并到一个 JSON 的 accounts 数组中）"""
+    """导出账号为 Sub2Api 格式（流式合并到一个 JSON 中）"""
 
     def make_account_entry(acc) -> dict:
         expires_at = int(acc.expires_at.timestamp()) if acc.expires_at else 0
@@ -482,31 +488,37 @@ async def export_accounts_sub2api(request: BatchExportRequest):
             "auto_pause_on_expired": True
         }
 
-    with get_db() as db:
-        ids = resolve_account_ids(
-            db, request.ids, request.select_all,
-            request.status_filter, request.email_service_filter, request.search_filter,
-            request.cpa_uploaded_filter
-        )
-        accounts = db.query(Account).filter(Account.id.in_(ids)).all()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # 鉴于无法提前获取单个账户以定义文件名，这里统一使用总称
+    filename = f"sub2api_tokens_{timestamp}.json"
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        payload = {
-            "proxies": [],
-            "accounts": [make_account_entry(acc) for acc in accounts]
-        }
-        content = json.dumps(payload, ensure_ascii=False, indent=2)
+    def generate_sub2api_stream():
+        with get_db() as db:
+            ids = resolve_account_ids(
+                db, request.ids, request.select_all,
+                request.status_filter, request.email_service_filter, request.search_filter,
+                request.cpa_uploaded_filter
+            )
+            
+            yield '{\n  "proxies": [],\n  "accounts": [\n'
+            first = True
+            
+            for acc in db.query(Account).filter(Account.id.in_(ids)).yield_per(1000):
+                data = make_account_entry(acc)
+                if not first:
+                    yield ",\n"
+                else:
+                    first = False
+                yield json.dumps(data, ensure_ascii=False, indent=2)
+                
+            yield '\n  ]\n}'
 
-        if len(accounts) == 1:
-            filename = f"{accounts[0].email}_sub2api.json"
-        else:
-            filename = f"sub2api_tokens_{timestamp}.json"
-
-        return StreamingResponse(
-            iter([content]),
-            media_type="application/json",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
+    return StreamingResponse(
+        generate_sub2api_stream(),
+        media_type="application/json",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @router.post("/export/cpa")

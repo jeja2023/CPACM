@@ -93,10 +93,83 @@ class TaskManager:
     def __init__(self):
         self.executor = _executor
         self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._cleanup_task: Optional[asyncio.Task] = None
 
     def set_loop(self, loop: asyncio.AbstractEventLoop):
         """设置事件循环（在 FastAPI 启动时调用）"""
         self._loop = loop
+        # 启动定时内存清理任务
+        if not self._cleanup_task or self._cleanup_task.done():
+            self._cleanup_task = loop.create_task(self._periodic_cleanup())
+
+    async def _periodic_cleanup(self):
+        """定期清理过期的内存中日志与状态，防止 OOM"""
+        while True:
+            try:
+                await asyncio.sleep(3600)  # 每小时执行一次
+                self._do_memory_cleanup()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"清理驻留任务数据时异常: {e}")
+
+    def _do_memory_cleanup(self):
+        """执行彻底的字典键值清除"""
+        from datetime import datetime
+        now = datetime.now()
+        
+        # 释放单体任务日志
+        tasks_to_delete = []
+        for task_uuid, status in list(_task_status.items()):
+            timestamp_str = status.get("timestamp") or status.get("completed_at")
+            if status.get("status") in ("completed", "failed", "cancelled"):
+                if not timestamp_str:
+                    tasks_to_delete.append(task_uuid)
+                    continue
+                if isinstance(timestamp_str, str):
+                    try:
+                        ts = datetime.fromisoformat(timestamp_str)
+                        if (now - ts).total_seconds() > 86400: # 超过24小时
+                            tasks_to_delete.append(task_uuid)
+                    except Exception:
+                        pass
+                        
+        for uuid in tasks_to_delete:
+            _task_status.pop(uuid, None)
+            with _get_log_lock(uuid):
+                _log_queues.pop(uuid, None)
+            _log_locks.pop(uuid, None)
+            with _ws_lock:
+                _ws_connections.pop(uuid, None)
+                _ws_sent_index.pop(uuid, None)
+            _task_cancelled.pop(uuid, None)
+
+        if tasks_to_delete:
+            logger.info(f"[内存回收] 已清理 {len(tasks_to_delete)} 个过期单体任务驻留记录")
+
+        # 释放批量任务日志
+        batches_to_delete = []
+        for batch_id, status in list(_batch_status.items()):
+            timestamp_str = status.get("timestamp")
+            if status.get("finished", False) and timestamp_str and isinstance(timestamp_str, str):
+                try:
+                    ts = datetime.fromisoformat(timestamp_str)
+                    if (now - ts).total_seconds() > 86400:
+                        batches_to_delete.append(batch_id)
+                except Exception:
+                    pass
+        
+        for batch_id in batches_to_delete:
+            _batch_status.pop(batch_id, None)
+            with _get_batch_lock(batch_id):
+                _batch_logs.pop(batch_id, None)
+            _batch_locks.pop(batch_id, None)
+            with _ws_lock:
+                _ws_connections.pop(f"batch_{batch_id}", None)
+                _ws_sent_index.pop(f"batch_{batch_id}", None)
+        
+        if batches_to_delete:
+            logger.info(f"[内存回收] 已清理 {len(batches_to_delete)} 个过期批量任务驻留记录")
 
     def get_loop(self) -> Optional[asyncio.AbstractEventLoop]:
         """获取事件循环"""
@@ -223,6 +296,7 @@ class TaskManager:
             _task_status[task_uuid] = {}
 
         _task_status[task_uuid]["status"] = status
+        _task_status[task_uuid]["timestamp"] = datetime.now().isoformat()
         _task_status[task_uuid].update(kwargs)
 
         # 实时广播状态更新

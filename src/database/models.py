@@ -42,15 +42,15 @@ class Account(Base):
     client_id = Column(String(255))  # OAuth Client ID
     account_id = Column(String(255))
     workspace_id = Column(String(255))
-    email_service = Column(String(50), nullable=False)  # 'tempmail', 'outlook', 'moe_mail'
+    email_service = Column(String(50), nullable=False, index=True)  # 'tempmail', 'outlook', 'moe_mail'
     email_service_id = Column(String(255))  # 邮箱服务中的ID
     proxy_used = Column(String(255))
     registered_at = Column(DateTime, default=datetime.utcnow)
     last_refresh = Column(DateTime)  # 最后刷新时间
     expires_at = Column(DateTime)  # Token 过期时间
-    status = Column(String(20), default='active')  # 'active', 'expired', 'banned', 'failed'
+    status = Column(String(20), default='active', index=True)  # 'active', 'expired', 'banned', 'failed'
     extra_data = Column(JSONEncodedDict)  # 额外信息存储
-    cpa_uploaded = Column(Boolean, default=False)  # 是否已上传到 CPA
+    cpa_uploaded = Column(Boolean, default=False, index=True)  # 是否已上传到 CPA
     cpa_uploaded_at = Column(DateTime)  # 上传时间
     source = Column(String(20), default='register')  # 'register' 或 'login'，区分账号来源
     subscription_type = Column(String(20))  # None / 'plus' / 'team'
