@@ -191,6 +191,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>添加邮箱服务商</h3>
+                <button class="close-btn" id="close-custom-modal">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="add-custom-form">
@@ -211,7 +212,122 @@
                     </div>
 
                     <div id="add-fields-container" style="margin-bottom: 24px;">
-                        <!-- 动态字段由 email_services.js 填充 -->
+                        <!-- MoeMail 字段 -->
+                        <div id="add-moemail-fields">
+                            <div class="form-group">
+                                <label for="api_url">API 地址</label>
+                                <input type="text" name="api_url" placeholder="https://mail.example.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="api_key">API Key</label>
+                                <input type="password" name="api_key" placeholder="请输入 API Key">
+                            </div>
+                            <div class="form-group">
+                                <label for="domain">默认域名</label>
+                                <input type="text" name="domain" placeholder="example.com (不带 @)">
+                            </div>
+                        </div>
+
+                        <!-- TempMail 字段 -->
+                        <div id="add-tempmail-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="tm_base_url">Worker URL</label>
+                                <input type="text" name="tm_base_url" placeholder="https://worker.your-name.workers.dev">
+                            </div>
+                            <div class="form-group">
+                                <label for="tm_admin_password">Admin 密码</label>
+                                <input type="password" name="tm_admin_password" placeholder="请输入 Admin 密码">
+                            </div>
+                            <div class="form-group">
+                                <label for="tm_domain">默认域名</label>
+                                <input type="text" name="tm_domain" placeholder="example.com">
+                            </div>
+                        </div>
+
+                        <!-- DuckMail 字段 -->
+                        <div id="add-duckmail-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="dm_base_url">API URL</label>
+                                <input type="text" name="dm_base_url" placeholder="https://api.duckmail.example.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="dm_api_key">API Key</label>
+                                <input type="password" name="dm_api_key" placeholder="请输入 API Key">
+                            </div>
+                            <div class="form-group">
+                                <label for="dm_domain">域名</label>
+                                <input type="text" name="dm_domain" placeholder="duck.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="dm_password_length">密码长度</label>
+                                <input type="number" name="dm_password_length" value="12" min="6">
+                            </div>
+                        </div>
+
+                        <!-- Freemail 字段 -->
+                        <div id="add-freemail-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="fm_base_url">Freemail URL</label>
+                                <input type="text" name="fm_base_url" placeholder="https://freemail.your-name.workers.dev">
+                            </div>
+                            <div class="form-group">
+                                <label for="fm_admin_token">Admin Token</label>
+                                <input type="password" name="fm_admin_token" placeholder="请输入 Admin Token">
+                            </div>
+                            <div class="form-group">
+                                <label for="fm_domain">域名</label>
+                                <input type="text" name="fm_domain" placeholder="freemail.example.com">
+                            </div>
+                        </div>
+
+                        <!-- CloudMail 字段 -->
+                        <div id="add-cloudmail-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="cm_base_url">CloudMail URL</label>
+                                <input type="text" name="cm_base_url" placeholder="https://cloudmail.example.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="cm_admin_email">管理员邮箱</label>
+                                <input type="email" name="cm_admin_email" placeholder="admin@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="cm_admin_password">管理员密码</label>
+                                <input type="password" name="cm_admin_password" placeholder="请输入管理员密码">
+                            </div>
+                            <div class="form-group">
+                                <label for="cm_domain">所用域名 (多个域名逗号分隔)</label>
+                                <input type="text" name="cm_domain" placeholder="domain1.com, domain2.com">
+                            </div>
+                        </div>
+
+                        <!-- IMAP 字段 -->
+                        <div id="add-imap-fields" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group" style="flex: 2;">
+                                    <label for="imap_host">IMAP 服务器</label>
+                                    <input type="text" name="imap_host" placeholder="imap.gmail.com">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="imap_port">端口</label>
+                                    <input type="number" name="imap_port" value="993">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="imap_use_ssl">使用 SSL</label>
+                                <select name="imap_use_ssl">
+                                    <option value="true">是 (SSL/TLS)</option>
+                                    <option value="false">否 (STARTTLS)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="imap_email">账号邮箱</label>
+                                <input type="email" name="imap_email" placeholder="your-email@gmail.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="imap_password">密码/授权码</label>
+                                <input type="password" name="imap_password" placeholder="请输入密码">
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-row">
@@ -220,7 +336,7 @@
                             <input type="number" id="custom-priority" name="priority" value="0" min="0">
                         </div>
                         <div class="form-group">
-                            <label style="display: flex; align-items: center; gap: 8px; margin-top: 32px;">
+                            <label style="display: flex; align-items: center; gap: 8px; margin-top: 32px; cursor: pointer;">
                                 <input type="checkbox" id="custom-enabled" name="enabled" checked> 启用
                             </label>
                         </div>
@@ -229,6 +345,209 @@
                     <div class="form-actions" style="margin-top: 24px;">
                         <button type="submit" class="btn btn-primary">创建服务</button>
                         <button type="button" class="btn btn-secondary" id="cancel-add-custom">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑服务商模态框 -->
+    <div class="modal" id="edit-custom-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>编辑邮箱服务商 <span id="edit-custom-type-badge" class="status-badge info">...</span></h3>
+                <button class="close-btn" id="close-edit-custom-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-custom-form">
+                    <input type="hidden" id="edit-custom-id">
+                    <input type="hidden" name="sub_type" id="edit-custom-sub-type-hidden">
+                    
+                    <div class="form-group">
+                        <label for="edit-custom-name">服务名称</label>
+                        <input type="text" id="edit-custom-name" name="name" required>
+                    </div>
+
+                    <div id="edit-fields-container" style="margin-bottom: 24px;">
+                        <!-- MoeMail 字段 -->
+                        <div id="edit-moemail-fields">
+                            <div class="form-group">
+                                <label for="edit-custom-api-url">API 地址</label>
+                                <input type="text" id="edit-custom-api-url" name="api_url">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-custom-api-key">API Key</label>
+                                <input type="password" id="edit-custom-api-key" name="api_key">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-custom-domain">默认域名</label>
+                                <input type="text" id="edit-custom-domain" name="domain">
+                            </div>
+                        </div>
+
+                        <!-- TempMail 字段 -->
+                        <div id="edit-tempmail-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="edit-tm-base-url">Worker URL</label>
+                                <input type="text" id="edit-tm-base-url" name="tm_base_url">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-tm-admin-password">Admin 密码</label>
+                                <input type="password" id="edit-tm-admin-password" name="tm_admin_password">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-tm-domain">默认域名</label>
+                                <input type="text" id="edit-tm-domain" name="tm_domain">
+                            </div>
+                        </div>
+
+                        <!-- DuckMail 字段 -->
+                        <div id="edit-duckmail-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="edit-dm-base-url">API URL</label>
+                                <input type="text" id="edit-dm-base-url" name="dm_base_url">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-dm-api-key">API Key</label>
+                                <input type="password" id="edit-dm-api-key" name="dm_api_key">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-dm-domain">域名</label>
+                                <input type="text" id="edit-dm-domain" name="dm_domain">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-dm-password-length">密码长度</label>
+                                <input type="number" id="edit-dm-password-length" name="dm_password_length">
+                            </div>
+                        </div>
+
+                        <!-- Freemail 字段 -->
+                        <div id="edit-freemail-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="edit-fm-base-url">Freemail URL</label>
+                                <input type="text" id="edit-fm-base-url" name="fm_base_url">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-fm-admin-token">Admin Token</label>
+                                <input type="password" id="edit-fm-admin-token" name="fm_admin_token">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-fm-domain">域名</label>
+                                <input type="text" id="edit-fm-domain" name="fm_domain">
+                            </div>
+                        </div>
+
+                        <!-- CloudMail 字段 -->
+                        <div id="edit-cloudmail-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="edit-cm-base-url">CloudMail URL</label>
+                                <input type="text" id="edit-cm-base-url" name="cm_base_url">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-cm-admin-email">管理员邮箱</label>
+                                <input type="email" id="edit-cm-admin-email" name="cm_admin_email">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-cm-admin-password">管理员密码</label>
+                                <input type="password" id="edit-cm-admin-password" name="cm_admin_password">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-cm-domain">域名 (逗号分隔)</label>
+                                <input type="text" id="edit-cm-domain" name="cm_domain">
+                            </div>
+                        </div>
+
+                        <!-- IMAP 字段 -->
+                        <div id="edit-imap-fields" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group" style="flex: 2;">
+                                    <label for="edit-imap-host">IMAP 服务器</label>
+                                    <input type="text" id="edit-imap-host" name="imap_host">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="edit-imap-port">端口</label>
+                                    <input type="number" id="edit-imap-port" name="imap_port">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-imap-use-ssl">使用 SSL</label>
+                                <select id="edit-imap-use-ssl" name="imap_use_ssl">
+                                    <option value="true">是</option>
+                                    <option value="false">否</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-imap-email">账号邮箱</label>
+                                <input type="email" id="edit-imap-email" name="imap_email">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-imap-password">密码/授权码</label>
+                                <input type="password" id="edit-imap-password" name="imap_password">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>优先级</label>
+                            <input type="number" id="edit-custom-priority" name="priority">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 8px; margin-top: 32px; cursor: pointer;">
+                                <input type="checkbox" id="edit-custom-enabled" name="enabled"> 启用
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-actions" style="margin-top: 24px;">
+                        <button type="submit" class="btn btn-primary">保存修改</button>
+                        <button type="button" class="btn btn-secondary" id="cancel-edit-custom">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑 Outlook 模态框 -->
+    <div class="modal" id="edit-outlook-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>编辑 Outlook 账号</h3>
+                <button class="close-btn" id="close-edit-outlook-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-outlook-form">
+                    <input type="hidden" id="edit-outlook-id">
+                    <div class="form-group">
+                        <label for="edit-outlook-email">邮箱地址</label>
+                        <input type="email" id="edit-outlook-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-outlook-password">密码</label>
+                        <input type="password" id="edit-outlook-password" name="password">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-outlook-client-id">Client ID (OAuth)</label>
+                        <input type="text" id="edit-outlook-client-id" name="client_id">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-outlook-refresh-token">Refresh Token (OAuth)</label>
+                        <input type="password" id="edit-outlook-refresh-token" name="refresh_token">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-outlook-priority">优先级</label>
+                            <input type="number" id="edit-outlook-priority" name="priority" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 8px; margin-top: 32px; cursor: pointer;">
+                                <input type="checkbox" id="edit-outlook-enabled" name="enabled"> 启用
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-actions" style="margin-top: 24px;">
+                        <button type="submit" class="btn btn-primary">保存修改</button>
+                        <button type="button" class="btn btn-secondary" id="cancel-edit-outlook">取消</button>
                     </div>
                 </form>
             </div>

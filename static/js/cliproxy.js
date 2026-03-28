@@ -47,9 +47,19 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPatrolStatus(true); // 初始加载需要回填表单
     loadPatrolHistory();
     setInterval(() => {
-        loadPatrolStatus(false); // 定时加载不需要回填表单，只更新运行状态文字
+        loadPatrolStatus(false);
         loadPatrolHistory();
     }, 5000);
+
+    // 同步按钮绑定
+    const syncBtn = document.getElementById('sync-list-btn');
+    if (syncBtn) {
+        syncBtn.addEventListener('click', () => {
+            fetchAccountList();
+            loadPatrolStatus();
+            toast.info('正在刷新账号列表和巡检统计...');
+        });
+    }
 
     // ---------------- 导航/过滤/搜索 ----------------
     // 抽屉内标签页切换
@@ -477,6 +487,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 触发一次显隐切换
                 toggleReplenishVisibility();
+            }
+
+            // 核心增强：如果当前没有手动扫描，回填上一次运行的统计数据到卡片
+            if (!isScanning && patrolStatus.history && patrolStatus.history.length > 0) {
+                const latest = patrolStatus.history[0];
+                statTotal.textContent = latest.total || 0;
+                stat401.textContent = latest.invalid_401 || 0;
+                statExhausted.textContent = latest.invalid_quota || 0;
+                statErrors.textContent = latest.errors || 0;
+                
+                const ready = (latest.total || 0) - (latest.invalid_401 || 0) - (latest.invalid_quota || 0) - (latest.errors || 0);
+                statReady.textContent = ready > 0 ? ready : 0;
             }
         } catch (err) { }
     }

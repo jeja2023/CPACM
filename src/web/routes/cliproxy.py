@@ -203,7 +203,13 @@ async def perform_scan(batch_id: str, req: ScanRequest):
         nonlocal completed, invalid_401, invalid_quota, errors
         auth_index = item.get("auth_index")
         name = item.get("name")
-        email = item.get("email") or item.get("account") or "unknown"
+        email = item.get("email") or item.get("account")
+        # 核心增强：如果元数据中没有邮箱，尝试从文件名（name）提取，兼容 .json 后缀
+        if not email and name:
+            email = name
+            if email.lower().endswith(".json"):
+                email = email[:-5]
+        if not email: email = "unknown"
         
         res = {"name": name, "email": email, "status": "ok", "quota": None, "error": None}
         
@@ -306,6 +312,10 @@ async def perform_scan(batch_id: str, req: ScanRequest):
             "errors": errors
         }
     )
+    
+    # 将汇总结果同步到数据库状态（如果是自动巡检，可能需要更完整的同步）
+    # 注意：perform_scan 已经针对单个账号更新了 status，但没有更新 cpa_uploaded
+    
     task_manager.add_batch_log(batch_id, f"[完成] 扫描结束。有效: {total - invalid_401 - invalid_quota - errors}, 401: {invalid_401}, 额度耗尽: {invalid_quota}, 异常: {errors}")
 
 async def perform_action(batch_id: str, req: ActionRequest):
@@ -348,6 +358,26 @@ async def perform_action(batch_id: str, req: ActionRequest):
                         
                 if is_ok:
                     success += 1
+                    # 核心修复：如果是删除操作，同步更新本地数据库 cpa_uploaded 状态
+                    if req.action == "delete":
+                        # 尝试解析邮箱 (如果是 email.json 形式)
+                        email_to_sync = name
+                        if email_to_sync.lower().endswith(".json"):
+                            email_to_sync = email_to_sync[:-5]
+                        
+                        try:
+                            with get_db() as db:
+                                from ...database.models import Account
+                                # 标记为未上传且状态由 active 转为 failed 或保留原有 banned/expired 状态
+                                acc = db.query(Account).filter(Account.email == email_to_sync).first()
+                                if acc:
+                                    acc.cpa_uploaded = False
+                                    acc.cpa_uploaded_at = None
+                                    if acc.status == 'active':
+                                        acc.status = 'failed'
+                                    db.commit()
+                        except Exception as dbe:
+                            logger.error(f"同步数据库状态失败 ({email_to_sync}): {dbe}")
                 else:
                     failed += 1
         except Exception as e:
@@ -716,10 +746,16 @@ async def list_accounts(service_id: int, target_type: str = "codex"):
             api_token = service.api_token
         
         import requests as sync_requests
+        from requests.exceptions import ReadTimeout, ConnectionError
         url = f"{base_mgmt_url}/auth-files"
-        resp = sync_requests.get(url, headers=_get_mgmt_headers(api_token), timeout=15)
-        if resp.status_code != 200:
-            raise HTTPException(status_code=resp.status_code, detail="无法获取账号列表")
+        try:
+            resp = sync_requests.get(url, headers=_get_mgmt_headers(api_token), timeout=20)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=resp.status_code, detail=f"无法获取账号列表 (HTTP {resp.status_code})")
+        except ReadTimeout:
+            raise HTTPException(status_code=504, detail="连接 CPA 服务器超时 (20s)，请检查该服务器是否在线或尝试刷新页面。")
+        except ConnectionError:
+            raise HTTPException(status_code=503, detail="无法连接到 CPA 服务器，请检查服务器地址配置及网络连通性。")
         
         data = resp.json()
         all_files = data.get("files", [])
@@ -730,7 +766,7 @@ async def list_accounts(service_id: int, target_type: str = "codex"):
         raise
     except Exception as e:
         logger.error(f"同步账号列表失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"同步列表发生意外错误: {str(e)}")
 
 @router.get("/patrol/status")
 async def get_patrol_status():
