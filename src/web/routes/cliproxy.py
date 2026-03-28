@@ -706,15 +706,15 @@ async def start_action(request: ActionRequest, background_tasks: BackgroundTasks
 
 @router.get("/list")
 async def list_accounts(service_id: int, target_type: str = "codex"):
-    with get_db() as db:
-        service = crud.get_cpa_service_by_id(db, service_id)
-        if not service:
-            raise HTTPException(status_code=404, detail="找不到指定的 CPA 服务")
-
-    base_mgmt_url = _normalize_mgmt_url(service.api_url)
-    api_token = service.api_token
-    
     try:
+        with get_db() as db:
+            service = crud.get_cpa_service_by_id(db, service_id)
+            if not service:
+                raise HTTPException(status_code=404, detail="找不到指定的 CPA 服务")
+            
+            base_mgmt_url = _normalize_mgmt_url(service.api_url)
+            api_token = service.api_token
+        
         import requests as sync_requests
         url = f"{base_mgmt_url}/auth-files"
         resp = sync_requests.get(url, headers=_get_mgmt_headers(api_token), timeout=15)
@@ -726,7 +726,10 @@ async def list_accounts(service_id: int, target_type: str = "codex"):
         # 简单过滤，不执行检测
         candidates = [f for f in all_files if f.get("type") == target_type]
         return {"accounts": candidates}
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"同步账号列表失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/patrol/status")
