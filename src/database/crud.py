@@ -98,6 +98,17 @@ def get_accounts(
     return query.all()
 
 
+def update_account_status_by_email(db: Session, email: str, status: str) -> bool:
+    """根据邮箱更新账户状态"""
+    db_account = get_account_by_email(db, email)
+    if not db_account:
+        return False
+    db_account.status = status
+    db_account.updated_at = datetime.utcnow()
+    db.commit()
+    return True
+
+
 def update_account(
     db: Session,
     account_id: int,

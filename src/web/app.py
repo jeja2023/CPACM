@@ -195,7 +195,7 @@ def create_app() -> FastAPI:
         # 初始化 CPA 自动巡检任务
         try:
             from .routes.cliproxy import auto_patrol_manager
-            auto_patrol_manager.setup()
+            await auto_patrol_manager.setup()
         except Exception as e:
             logger.warning(f"巡检管理器启动失败: {e}")
 

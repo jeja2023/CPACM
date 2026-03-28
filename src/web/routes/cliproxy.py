@@ -276,6 +276,11 @@ async def perform_scan(batch_id: str, req: ScanRequest):
             res["error"] = str(e)
             errors += 1
             
+        if res["status"] in ["401", "exhausted"]:
+            with get_db() as db:
+                db_status = 'banned' if res["status"] == "401" else 'expired'
+                crud.update_account_status_by_email(db, res["email"], db_status)
+
         completed += 1
         task_manager.update_batch_status(batch_id, completed=completed, success=completed-errors, failed=errors)
         if completed % 10 == 0 or completed == total:
@@ -372,7 +377,7 @@ class AutoPatrolManager:
         self._status: str = "stopped" # stopped, running, idle
         self._history: List[Dict[str, Any]] = [] # 存储最近 50 条记录
         self._data_path = Path("data/cliproxy_patrol.json")
-        self._load()
+        # self._load() 移动到异步 setup 中以规避某些环境下的循环检查异常
 
     def _load(self):
         """加载持久化配置"""
@@ -387,16 +392,17 @@ class AutoPatrolManager:
         except Exception as e:
             logger.error(f"加载巡检配置失败: {e}")
 
-    def setup(self):
+    async def setup(self):
         """应用启动时调用，执行自动开启逻辑"""
+        self._load() # 延迟加载配置
         if self._config and self._config.enabled:
             # 只有在应用正式启动后才创建异步任务
             logger.info("检测到自动巡检配置已开启，准备启动任务...")
             try:
-                loop = asyncio.get_event_loop()
-                loop.create_task(self._delayed_start())
+                # 在异步上下文中安全启动循环
+                self.start()
             except Exception as e:
-                logger.error(f"自动巡检定时任务启动异常: {e}")
+                logger.error(f"自动巡检开启异常: {e}")
 
     async def _delayed_start(self):
         await asyncio.sleep(5)
