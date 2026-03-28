@@ -73,6 +73,22 @@ python webui.py
 
 访问 `http://localhost:8000` 即可进入管理面板。
 
+### 3. Docker 部署 (推荐)
+
+如果您希望在 Linux 服务器上通过容器化方式部署，请按照以下步骤操作：
+
+```bash
+# 1. 切换到 docker 目录
+cd docker
+
+# 2. 启动服务 (首次运行会自动下载并构建镜像)
+docker-compose up -d
+```
+
+启动完成后，通过 `http://localhost:9090` 访问管理面板。
+- **持久化数据**：数据库文件存储在 `docker/data/`，日志在 `docker/logs/`。
+- **停止服务**：执行 `docker-compose down`。
+
 进入系统设置页添加 CPA 服务，即可使用。
 
 ### 4. 桌面版运行
