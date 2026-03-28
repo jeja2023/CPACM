@@ -384,13 +384,19 @@ class AutoPatrolManager:
                 if "config" in data:
                     self._config = AutoPatrolConfig(**data["config"])
                 self._history = data.get("history", [])
-                
-                # 如果配置为开启，则自动启动
-                if self._config and self._config.enabled:
-                    # 延迟启动，避免启动时并发过高
-                    asyncio.create_task(self._delayed_start())
         except Exception as e:
             logger.error(f"加载巡检配置失败: {e}")
+
+    def setup(self):
+        """应用启动时调用，执行自动开启逻辑"""
+        if self._config and self._config.enabled:
+            # 只有在应用正式启动后才创建异步任务
+            logger.info("检测到自动巡检配置已开启，准备启动任务...")
+            try:
+                loop = asyncio.get_event_loop()
+                loop.create_task(self._delayed_start())
+            except Exception as e:
+                logger.error(f"自动巡检定时任务启动异常: {e}")
 
     async def _delayed_start(self):
         await asyncio.sleep(5)
